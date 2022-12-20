@@ -1531,6 +1531,9 @@ static void xs_tcp_state_change(struct sock *sk)
 		 * If the server closed down the connection, make sure that
 		 * we back off before reconnecting
 		 */
+		/*
+		 * 当这里收到server端的RST包时，会延迟 reestablish_timeout 秒重新连接
+		 */
 		if (xprt->reestablish_timeout < XS_TCP_INIT_REEST_TO)
 			xprt->reestablish_timeout = XS_TCP_INIT_REEST_TO;
 		break;
@@ -2256,6 +2259,11 @@ static void xs_connect(struct rpc_xprt *xprt, struct rpc_task *task)
 		queue_delayed_work(rpciod_workqueue,
 				   &transport->connect_worker,
 				   xprt->reestablish_timeout);
+		/*
+		 * 这里是获取重连的延迟时间
+		 * 规则是：重连时间翻倍，最低3s(XS_TCP_INIT_REEST_TO)
+		 * 最高5分钟(XS_TCP_MAX_REEST_TO)
+		 */
 		xprt->reestablish_timeout <<= 1;
 		if (xprt->reestablish_timeout < XS_TCP_INIT_REEST_TO)
 			xprt->reestablish_timeout = XS_TCP_INIT_REEST_TO;
